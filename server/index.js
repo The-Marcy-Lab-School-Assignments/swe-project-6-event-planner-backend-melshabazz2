@@ -1,5 +1,5 @@
 require('dotenv').config();
-
+console.log('running')
 const path = require('path');
 const express = require('express');
 const cookieSession = require('cookie-session');
@@ -32,29 +32,50 @@ app.use(cookieSession({
 }));
 
 app.use(express.json());
+// const pathToFrontend = ;
+
 
 // ====================================
 // API Routes (Match your API Contract)
 // ====================================
 
-// Auth & Users
-app.post('/api/users', authControllers.register);
-app.post('/api/session', authControllers.login);
-app.get('/api/me', authControllers.getMe);
-app.delete('/api/session', authControllers.logout);
+// app.get('/', (req, res) => {
+//     res.send('<h1>EventPlanner API is Online</h1><p>Visit <a href="/api/events">/api/events</a> to see data.</p>');
+// });
 
-// Events (Public)
+// Auth
+app.post('/api/auth/register', authControllers.register); // FIX: Path name
+app.post('/api/auth/login', authControllers.login);       // FIX: Path name
+app.get('/api/auth/me', authControllers.getMe);
+app.delete('/api/auth/logout', authControllers.logout);   // FIX: Path name
+
+// User Account Management
+app.patch('/api/users/:user_id', checkAuthentication, userControllers.updatePassword); // ADDED
+app.delete('/api/users/:user_id', checkAuthentication, userControllers.deleteAccount); // ADDED
+
+// Events
 app.get('/api/events', eventControllers.list);
-
-// Events (Protected)
+app.get('/api/users/:user_id/events', eventControllers.listByUserId); // ADDED
 app.post('/api/events', checkAuthentication, eventControllers.create);
+app.patch('/api/events/:event_id', checkAuthentication, eventControllers.update);      // ADDED
 app.delete('/api/events/:event_id', checkAuthentication, eventControllers.delete);
 
-// RSVPs (Protected)
-app.post('/api/rsvps', checkAuthentication, rsvpControllers.create);
-app.delete('/api/rsvps/:rsvp_id', checkAuthentication, rsvpControllers.delete);
+// RSVPs
+app.get('/api/users/:user_id/rsvps', rsvpControllers.listUserRSVPs); // ADDED
+app.post('/api/events/:event_id/rsvps', checkAuthentication, rsvpControllers.create); // FIX: Param name
+app.delete('/api/events/:event_id/rsvps', checkAuthentication, rsvpControllers.delete); // FIX: Param name
 
 // ====================================
-// Listen
+// Static Middleware
 // ====================================
+app.use(express.static(path.join(__dirname, '../frontend')));
+
+// ====================================
+// Global Error Handler (Required for Rubric)
+// ====================================
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).send({ message: "Internal server error" });
+});
+
 app.listen(PORT, () => console.log(`Server running at http://localhost:${PORT}`));
